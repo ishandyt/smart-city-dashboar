@@ -4,65 +4,26 @@
     <meta charset="UTF-8">
     <title>스마트도시 통계 대시보드</title>
     <style>
-        /* 웹페이지 전체의 기본 글씨체와 배경색을 설정합니다. */
         body { font-family: 'Malgun Gothic', sans-serif; padding: 30px; background-color: #f4f6f9; }
         
-        /* 💡 추가된 디자인: 검색 필터 전체를 감싸는 하얀색 둥근 상자입니다. */
-        .filter-container {
-            display: flex; /* 상자 안의 내용물들을 가로로 나란히 배치하는 마법입니다. */
-            align-items: flex-end; /* 아래쪽 선을 기준으로 가지런히 맞춥니다. */
-            gap: 20px; /* 상자들 사이의 간격을 띄워줍니다. */
-            background-color: white;
-            padding: 20px 30px;
-            border-radius: 10px; /* 모서리를 둥글게 */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* 살짝 그림자를 주어 입체감을 살립니다. */
-            margin-bottom: 20px;
-        }
-
-        /* 💡 추가된 디자인: 각각의 라벨(제목)과 드롭다운을 묶어주는 그룹입니다. */
-        .filter-group {
-            display: flex;
-            flex-direction: column; /* 위(라벨) 아래(드롭다운)로 배치합니다. */
-            gap: 8px; /* 라벨과 드롭다운 사이 간격 */
-        }
-
-        /* 라벨(광역지자체, 시작연도 등)의 글씨 크기와 색상입니다. */
-        .filter-group label {
-            font-size: 13px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        /* 드롭다운(선택 상자) 자체의 예쁜 디자인입니다. */
-        .filter-group select {
-            padding: 10px 15px;
-            font-size: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            outline: none; /* 클릭했을 때 생기는 기본 파란 테두리를 없앱니다. */
-            min-width: 150px; /* 상자의 최소 너비를 정해줍니다. */
-            cursor: pointer;
-        }
-
-        /* 💡 조회 버튼 디자인 (보내주신 사진의 남색 버튼과 비슷하게 맞췄습니다!) */
-        .search-btn { 
-            padding: 11px 30px; 
-            font-size: 15px; 
-            font-weight: bold;
-            background-color: #3b6083; /* 고급스러운 남색 */
-            color: white; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            transition: 0.2s; /* 마우스 올릴 때 부드럽게 색이 변하는 효과 */
-        }
+        .filter-container { display: flex; align-items: flex-end; gap: 20px; background-color: white; padding: 20px 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 8px; }
+        .filter-group label { font-size: 13px; font-weight: bold; color: #555; }
+        .filter-group select { padding: 10px 15px; font-size: 15px; border: 1px solid #ccc; border-radius: 5px; outline: none; min-width: 150px; cursor: pointer; }
+        
+        /* 조회 버튼 디자인 */
+        .search-btn { padding: 11px 30px; font-size: 15px; font-weight: bold; background-color: #3b6083; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; }
         .search-btn:hover { background-color: #2c4966; }
+        
+        /* 💡 추가된 디자인: 엑셀 다운로드 버튼 */
+        .export-btn { padding: 11px 20px; font-size: 15px; font-weight: bold; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; margin-left: auto; }
+        .export-btn:hover { background-color: #218838; }
 
-        /* 표(Table) 디자인 (이전과 동일) */
-        table { width: 100%; border-collapse: collapse; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; margin-top: 20px; }
         th, td { border: 1px solid #eee; padding: 14px; text-align: center; font-size: 14px; }
         th { background-color: #f8f9fa; color: #333; font-weight: bold; border-bottom: 2px solid #ddd; }
         tr:hover { background-color: #f1f5f9; }
+        
         #loading-message { margin-top: 15px; font-weight: bold; color: #007BFF; }
         .highlight { color: #d9534f; font-weight: bold; } 
         .positive { color: #5cb85c; font-weight: bold; } 
@@ -70,25 +31,17 @@
 </head>
 <body onload="initFilters()">
 
-    <h1>📊 스마트도시 통계 분석 대시보드</h1>
-    <p>원하는 지자체와 연도 범위를 선택한 후 조회 버튼을 눌러보세요.</p>
+    <h1>📊 스마트도시 통계 분석 대시보드 (무안군 포커스)</h1>
+    <p>무안군을 기준으로 데이터를 조회하고, 결과를 엑셀(CSV)로 다운로드할 수 있습니다.</p>
 
     <div class="filter-container">
         <div class="filter-group">
             <label>광역지자체</label>
-            <select id="sido">
-                <option value="전라남도">전라남도</option>
-                <option value="서울특별시">서울특별시</option>
-                <option value="부산광역시">부산광역시</option>
-            </select>
+            <select id="sido" onchange="updateSigungu()"></select>
         </div>
         <div class="filter-group">
             <label>기초지자체</label>
-            <select id="sigungu">
-                <option value="장성군">장성군</option>
-                <option value="강남구">강남구</option>
-                <option value="해운대구">해운대구</option>
-            </select>
+            <select id="sigungu"></select>
         </div>
         <div class="filter-group">
             <label>시작연도</label>
@@ -98,62 +51,120 @@
             <label>끝연도</label>
             <select id="endYear"></select>
         </div>
-        <button class="search-btn" onclick="fetchAndAnalyzeData()">조회</button>
+        <button class="search-btn" onclick="fetchAndAnalyzeData()">조회하기</button>
+        
+        <button class="export-btn" onclick="exportToCSV()">엑셀(CSV) 다운로드 📥</button>
     </div>
 
     <div id="loading-message"></div>
     <div id="table-container"></div>
 
     <script>
-        // 1. 화면이 켜질 때 연도 드롭다운을 2010년부터 2026년까지 자동으로 채워주는 함수입니다.
+        // 광역 및 기초지자체 데이터 (무안군 포함)
+        const regionData = {
+            "전체": ["전체"],
+            "서울특별시": ["전체", "강남구", "종로구", "중구"],
+            "부산광역시": ["전체", "해운대구", "수영구", "부산진구"],
+            "전라남도": ["전체", "목포시", "여수시", "순천시", "나주시", "광양시", "담양군", "곡성군", "구례군", "고흥군", "보성군", "화순군", "장흥군", "강진군", "해남군", "영암군", "무안군", "함평군", "영광군", "장성군", "완도군", "진도군", "신안군"]
+        };
+
+        // 화면 켜질 때 초기 세팅
         function initFilters() {
             const startYearSelect = document.getElementById('startYear');
             const endYearSelect = document.getElementById('endYear');
-            
-            // 2010년부터 2026년까지 반복문을 돌면서 <option>을 만듭니다.
             for (let year = 2010; year <= 2026; year++) {
-                let option1 = document.createElement('option');
-                option1.value = year;
-                option1.text = year + '년';
-                startYearSelect.add(option1);
-
-                let option2 = document.createElement('option');
-                option2.value = year;
-                option2.text = year + '년';
-                endYearSelect.add(option2);
+                startYearSelect.add(new Option(year + '년', year));
+                endYearSelect.add(new Option(year + '년', year));
             }
-
-            // 기본값 세팅: 시작은 2016년, 끝은 2026년으로 맞춰둡니다.
-            startYearSelect.value = "2016";
+            startYearSelect.value = "2020";
             endYearSelect.value = "2026";
+
+            const sidoSelect = document.getElementById('sido');
+            for (const sido in regionData) {
+                sidoSelect.add(new Option(sido, sido));
+            }
+            // 💡 기본값을 전라남도로 고정합니다.
+            sidoSelect.value = "전라남도"; 
+            
+            // 전라남도에 맞는 시/군 목록을 불러옵니다.
+            updateSigungu();
+
+            // 💡 무안군을 콕 집어서 기본값으로 강제 세팅합니다!
+            document.getElementById('sigungu').value = "무안군";
         }
 
+        // 광역지자체 변경 시 기초지자체 목록 업데이트
+        function updateSigungu() {
+            const sido = document.getElementById('sido').value;
+            const sigunguSelect = document.getElementById('sigungu');
+            
+            sigunguSelect.innerHTML = "";
+            const sigunguList = regionData[sido];
+            sigunguList.forEach(name => {
+                sigunguSelect.add(new Option(name, name));
+            });
+        }
+
+        // 3중 무적 우회 엔진
+        async function fetchWithRetry(url) {
+            const proxies = [
+                "", 
+                "https://api.allorigins.win/raw?url=", 
+                "https://corsproxy.io/?" 
+            ];
+
+            for (let proxy of proxies) {
+                try {
+                    const targetUrl = proxy ? proxy + encodeURIComponent(url) : url;
+                    const response = await fetch(targetUrl);
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (e) {
+                    console.log("우회 시도 중...");
+                }
+            }
+            throw new Error("서버 연결에 실패했습니다.");
+        }
+
+        // 데이터 조회 및 분석 메인 함수
         async function fetchAndAnalyzeData() {
             const loadingBox = document.getElementById('loading-message');
             const tableBox = document.getElementById('table-container');
 
-            // 💡 2. 사용자가 화면에서 선택한 시작연도와 끝연도의 '숫자'를 가져옵니다.
+            const selectedSido = document.getElementById('sido').value;
+            const selectedSigungu = document.getElementById('sigungu').value;
             const selectedStartYear = document.getElementById('startYear').value;
             const selectedEndYear = document.getElementById('endYear').value;
 
-            loadingBox.innerText = `[${selectedStartYear}년 ~ ${selectedEndYear}년] 데이터를 통계청에서 가져오는 중입니다... 🏃‍♂️💨`;
+            loadingBox.innerText = `[${selectedSido} ${selectedSigungu}] 데이터를 불러오고 있습니다... 🏃‍♂️💨`;
             tableBox.innerHTML = ""; 
 
-            // 💡 3. 주문서(URL)에 사용자가 선택한 연도를 합체(변수 치환)시킵니다!
-            // 기존 2020, 2026 자리에 ${selectedStartYear} 와 ${selectedEndYear} 가 들어갑니다.
-            const kosisUrl = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=NDQ1ZTU0ODVjOWM2N2MxMTg1YzI5ZWVjZDhlMGQ4NTg=&itmId=T10+T001+T002+&objL1=00+11+21+22+23+24+25+26+29+31+32+33+34+35+36+37+38+39+&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=Y&startPrdDe=${selectedStartYear}&endPrdDe=${selectedEndYear}&outputFields=OBJ_NM+ITM_NM+UNIT_NM+PRD_DE+&orgId=101&tblId=DT_1YL20631`;
+            // KOSIS API URL (objL1=ALL 적용, 연도 자동 변환)
+            const kosisUrl = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=NDQ1ZTU0ODVjOWM2N2MxMTg1YzI5ZWVjZDhlMGQ4NTg=&itmId=T10+T001+T002+&objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=Y&startPrdDe=${selectedStartYear}&endPrdDe=${selectedEndYear}&outputFields=OBJ_NM+ITM_NM+UNIT_NM+PRD_DE+&orgId=101&tblId=DT_1YL20631`;
             
             try {
-                // Vercel 직접 연결!
-                const response = await fetch(kosisUrl);
-                const data = await response.json();
+                const rawData = await fetchWithRetry(kosisUrl);
                 
-                if (data.err || data.error || data.errMsg) {
-                    loadingBox.innerText = "앗! 통계청에서 에러 쪽지를 보냈습니다: " + JSON.stringify(data);
+                if (rawData.err || rawData.error) {
+                    loadingBox.innerText = "앗! 통계청 쪽지: " + JSON.stringify(rawData);
                     return; 
                 }
 
-                // 자체 연산 엔진 가동 (이전 단계와 동일합니다)
+                // 지역 필터링
+                let data = rawData;
+                if (selectedSigungu !== "전체") {
+                    data = rawData.filter(item => item.OBJ_NM === selectedSigungu);
+                } else if (selectedSido !== "전체") {
+                    data = rawData.filter(item => item.OBJ_NM === selectedSido);
+                }
+
+                if (data.length === 0) {
+                    loadingBox.innerHTML = `<span style="color:#d9534f;">😢 조회된 데이터가 없습니다.</span>`;
+                    return;
+                }
+
+                // 연도별 데이터 그룹화 및 연산
                 const groupedData = {};
                 data.forEach(item => {
                     const key = item.OBJ_NM + "_" + item.ITM_NM; 
@@ -163,8 +174,9 @@
                     groupedData[key].years[item.PRD_DE] = item.DT ? parseFloat(item.DT) : null;
                 });
 
+                // 표 HTML 생성
                 let tableHTML = `
-                    <table>
+                    <table id="resultTable">
                         <thead>
                             <tr>
                                 <th>지자체명</th>
@@ -195,7 +207,7 @@
                         const pastYear = String(parseInt(latestYear) - 5);
                         const pastValue = group.years[pastYear];
                         
-                        let changeRateHTML = "<span style='color:gray;'>비교 불가 (5년전 데이터 없음)</span>";
+                        let changeRateHTML = "비교 불가"; // 엑셀 다운로드를 위해 HTML 태그를 최소화합니다.
                         let pastValueDisplay = "-";
 
                         if (pastValue !== undefined && pastValue !== null && pastValue !== 0) {
@@ -226,11 +238,42 @@
 
                 tableHTML += `</tbody></table>`;
                 tableBox.innerHTML = tableHTML;
-                loadingBox.innerText = `🎉 성공! 선택하신 ${selectedStartYear}년~${selectedEndYear}년 기준 분석을 마쳤습니다!`;
+                loadingBox.innerText = `🎉 무안군 맞춤형 데이터 조회가 완료되었습니다! 우측 상단의 엑셀 다운로드 버튼을 눌러보세요.`;
 
             } catch (error) {
-                loadingBox.innerText = "앗! 데이터를 분석하는데 실패했어요. 😢 원인: " + error.message;
+                loadingBox.innerText = "앗! " + error.message;
             }
+        }
+
+        // 💡 엑셀(CSV) 내보내기 마법 함수
+        function exportToCSV() {
+            // 화면에 그려진 표(Table)를 찾습니다.
+            const table = document.getElementById("resultTable");
+            
+            if (!table) {
+                alert("먼저 [조회하기] 버튼을 눌러 데이터를 불러와 주세요!");
+                return;
+            }
+
+            let csvContent = "\uFEFF"; // 한글이 엑셀에서 깨지지 않게 해주는 마법의 코드(BOM)입니다.
+            const rows = table.querySelectorAll("tr");
+
+            // 표의 모든 줄을 하나씩 돌면서 글자만 뽑아냅니다.
+            rows.forEach(row => {
+                const cols = row.querySelectorAll("th, td");
+                // 콤마(,)가 포함된 숫자 때문에 엑셀 칸이 밀리지 않도록 양옆에 따옴표를 씌워줍니다.
+                const rowData = Array.from(cols).map(col => `"${col.innerText}"`);
+                csvContent += rowData.join(",") + "\n";
+            });
+
+            // 엑셀(CSV) 파일로 예쁘게 포장해서 컴퓨터로 다운로드합니다.
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "무안군_스마트도시_통계분석.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>
