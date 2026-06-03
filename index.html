@@ -5,82 +5,54 @@
     <title>스마트도시 통계 대시보드</title>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; padding: 30px; background-color: #f9f9f9; }
-        
-        /* 표(Table)를 예쁘게 꾸며주는 디자인입니다. */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: center;
-        }
-        th {
-            background-color: #007BFF;
-            color: white;
-            font-weight: bold;
-        }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+        th { background-color: #007BFF; color: white; font-weight: bold; }
         tr:hover { background-color: #f1f1f1; }
-        
         button { padding: 10px 20px; font-size: 16px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
         button:hover { background-color: #218838; }
-
-        /* 상태 안내 문구의 색상과 여백을 조절합니다. */
         #loading-message { margin-top: 15px; font-weight: bold; color: #007BFF; }
     </style>
 </head>
 <body>
     <h1>📊 스마트도시 통계 분석 대시보드 (진짜 데이터 연동!)</h1>
-    <p>Vercel 정식 주소가 생겼으니, 이제 통계청(KOSIS)의 진짜 데이터를 실시간으로 가져와 표를 그립니다.</p>
+    <p>가장 강력한 특급 배달 기사를 통해 통계청(KOSIS) 데이터를 가져옵니다.</p>
 
     <button onclick="fetchAndDrawTable()">진짜 데이터로 표 그리기!</button>
 
     <div id="loading-message"></div>
-
     <div id="table-container"></div>
 
     <script>
-        // 버튼을 누르면 실행되는 메인 함수입니다.
         async function fetchAndDrawTable() {
             const loadingBox = document.getElementById('loading-message');
             const tableBox = document.getElementById('table-container');
 
-            // 1. 버튼을 누르면 기존에 있던 표를 지우고, 가져오는 중이라는 안내를 띄웁니다.
-            loadingBox.innerText = "통계청 주방에서 진짜 요리(데이터)를 가져오는 중입니다... 🏃‍♂️💨";
+            loadingBox.innerText = "통계청 주방에서 데이터를 꼼꼼하게 포장해서 가져오는 중입니다... 🏃‍♂️💨";
             tableBox.innerHTML = ""; 
 
-            // 2. 멘티님의 KOSIS 진짜 원본 주문서(URL)입니다. (2020~2026년)
+            // 멘티님의 진짜 KOSIS 원본 주문서(URL)
             const kosisUrl = "https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=NDQ1ZTU0ODVjOWM2N2MxMTg1YzI5ZWVjZDhlMGQ4NTg=&itmId=T10+T001+T002+&objL1=00+11+21+22+23+24+25+26+29+31+32+33+34+35+36+37+38+39+&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=Y&startPrdDe=2020&endPrdDe=2026&outputFields=OBJ_NM+ITM_NM+UNIT_NM+PRD_DE+&orgId=101&tblId=DT_1YL20631";
             
-            // 3. Vercel 서버용 안전 우회 주소 (가끔 공공기관 API가 변덕을 부릴 때를 대비한 안전장치)
-            const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(kosisUrl);
+            // 💡 수정된 핵심 부분: 가장 안정적인 allorigins의 'get' 방식을 사용합니다.
+            const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(kosisUrl);
 
             try {
-                // 4. 웨이터를 출발시킵니다.
-                let response = await fetch(proxyUrl);
+                // 1. 특급 배달 기사가 데이터를 'contents'라는 큰 박스에 이중 포장해서 가져옵니다.
+                const response = await fetch(proxyUrl);
+                const wrapperData = await response.json();
                 
-                // 만약 첫 번째 방법이 안 되면, KOSIS 원본 주소로 곧바로 재시도합니다.
-                if (!response.ok) {
-                    response = await fetch(kosisUrl);
-                }
-
-                // 5. 가져온 진짜 데이터를 JSON 그릇에 담습니다.
-                const data = await response.json();
+                // 2. 포장지(contents)를 뜯어서 진짜 데이터를 컴퓨터가 읽기 편하게 번역(JSON.parse)합니다.
+                const data = JSON.parse(wrapperData.contents);
                 
-                // 6. 만약 통계청에서 에러 쪽지를 보냈다면 화면에 보여주고 코드를 멈춥니다.
-                if (data.err || data.error) {
+                // 3. 통계청에서 에러 쪽지를 보냈을 경우
+                if (data.err || data.error || data.errMsg) {
                     loadingBox.innerText = "앗! 통계청에서 에러 쪽지를 보냈습니다: " + JSON.stringify(data);
                     return; 
                 }
 
-                // 7. 여기까지 무사히 통과했다면 성공입니다!
                 loadingBox.innerText = "🎉 성공! 100% 진짜 공공데이터로 표를 그렸습니다!";
 
-                // 8. 표의 제목줄(머리글)을 만듭니다.
                 let tableHTML = `
                     <table>
                         <thead>
@@ -95,30 +67,29 @@
                         <tbody>
                 `;
 
-                // 9. 진짜 데이터(data)를 하나씩 순회하며 표의 행(tr)을 계속 추가합니다.
                 data.forEach(function(item) {
+                    // 데이터가 비어있으면 '-' 표시를 해줍니다.
+                    const value = item.DT ? item.DT : "-";
+
                     tableHTML += `
                         <tr>
                             <td>${item.PRD_DE}</td>
                             <td>${item.OBJ_NM}</td>
                             <td>${item.ITM_NM}</td>
-                            <td>${item.DT}</td>
+                            <td>${value}</td>
                             <td>${item.UNIT_NM}</td>
                         </tr>
                     `;
                 });
 
-                // 10. 표를 닫아줍니다.
                 tableHTML += `
                         </tbody>
                     </table>
                 `;
 
-                // 11. 완성된 표를 화면에 나타냅니다.
                 tableBox.innerHTML = tableHTML;
 
             } catch (error) {
-                // 인터넷이 끊기거나 심각한 문제가 생겼을 때의 방어막입니다.
                 loadingBox.innerText = "앗! 데이터를 가져오는데 실패했어요. 😢 원인: " + error.message;
             }
         }
