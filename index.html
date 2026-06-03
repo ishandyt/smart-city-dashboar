@@ -11,11 +11,9 @@
         .filter-group label { font-size: 13px; font-weight: bold; color: #555; }
         .filter-group select { padding: 10px 15px; font-size: 15px; border: 1px solid #ccc; border-radius: 5px; outline: none; min-width: 150px; cursor: pointer; }
         
-        /* 조회 버튼 디자인 */
         .search-btn { padding: 11px 30px; font-size: 15px; font-weight: bold; background-color: #3b6083; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; }
         .search-btn:hover { background-color: #2c4966; }
         
-        /* 💡 추가된 디자인: 엑셀 다운로드 버튼 */
         .export-btn { padding: 11px 20px; font-size: 15px; font-weight: bold; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; margin-left: auto; }
         .export-btn:hover { background-color: #218838; }
 
@@ -52,7 +50,6 @@
             <select id="endYear"></select>
         </div>
         <button class="search-btn" onclick="fetchAndAnalyzeData()">조회하기</button>
-        
         <button class="export-btn" onclick="exportToCSV()">엑셀(CSV) 다운로드 📥</button>
     </div>
 
@@ -60,7 +57,6 @@
     <div id="table-container"></div>
 
     <script>
-        // 광역 및 기초지자체 데이터 (무안군 포함)
         const regionData = {
             "전체": ["전체"],
             "서울특별시": ["전체", "강남구", "종로구", "중구"],
@@ -68,7 +64,6 @@
             "전라남도": ["전체", "목포시", "여수시", "순천시", "나주시", "광양시", "담양군", "곡성군", "구례군", "고흥군", "보성군", "화순군", "장흥군", "강진군", "해남군", "영암군", "무안군", "함평군", "영광군", "장성군", "완도군", "진도군", "신안군"]
         };
 
-        // 화면 켜질 때 초기 세팅
         function initFilters() {
             const startYearSelect = document.getElementById('startYear');
             const endYearSelect = document.getElementById('endYear');
@@ -83,17 +78,12 @@
             for (const sido in regionData) {
                 sidoSelect.add(new Option(sido, sido));
             }
-            // 💡 기본값을 전라남도로 고정합니다.
             sidoSelect.value = "전라남도"; 
-            
-            // 전라남도에 맞는 시/군 목록을 불러옵니다.
             updateSigungu();
-
-            // 💡 무안군을 콕 집어서 기본값으로 강제 세팅합니다!
+            // 기본값을 무안군으로 세팅합니다.
             document.getElementById('sigungu').value = "무안군";
         }
 
-        // 광역지자체 변경 시 기초지자체 목록 업데이트
         function updateSigungu() {
             const sido = document.getElementById('sido').value;
             const sigunguSelect = document.getElementById('sigungu');
@@ -105,29 +95,6 @@
             });
         }
 
-        // 3중 무적 우회 엔진
-        async function fetchWithRetry(url) {
-            const proxies = [
-                "", 
-                "https://api.allorigins.win/raw?url=", 
-                "https://corsproxy.io/?" 
-            ];
-
-            for (let proxy of proxies) {
-                try {
-                    const targetUrl = proxy ? proxy + encodeURIComponent(url) : url;
-                    const response = await fetch(targetUrl);
-                    if (response.ok) {
-                        return await response.json();
-                    }
-                } catch (e) {
-                    console.log("우회 시도 중...");
-                }
-            }
-            throw new Error("서버 연결에 실패했습니다.");
-        }
-
-        // 데이터 조회 및 분석 메인 함수
         async function fetchAndAnalyzeData() {
             const loadingBox = document.getElementById('loading-message');
             const tableBox = document.getElementById('table-container');
@@ -137,21 +104,29 @@
             const selectedStartYear = document.getElementById('startYear').value;
             const selectedEndYear = document.getElementById('endYear').value;
 
-            loadingBox.innerText = `[${selectedSido} ${selectedSigungu}] 데이터를 불러오고 있습니다... 🏃‍♂️💨`;
+            loadingBox.innerText = `[${selectedSido} ${selectedSigungu}] 데이터를 안전하게 '이중 포장'해서 가져오는 중입니다... 🏃‍♂️💨`;
             tableBox.innerHTML = ""; 
 
-            // KOSIS API URL (objL1=ALL 적용, 연도 자동 변환)
+            // 멘티님이 발급해주신 최신 기초지자체(ALL) URL입니다!
             const kosisUrl = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=NDQ1ZTU0ODVjOWM2N2MxMTg1YzI5ZWVjZDhlMGQ4NTg=&itmId=T10+T001+T002+&objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=Y&startPrdDe=${selectedStartYear}&endPrdDe=${selectedEndYear}&outputFields=OBJ_NM+ITM_NM+UNIT_NM+PRD_DE+&orgId=101&tblId=DT_1YL20631`;
             
+            // 💡 핵심 해결책: 7단계에서 대성공했던 '이중 포장(get)' 특급 배달 기사로 원상복구했습니다.
+            const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(kosisUrl);
+
             try {
-                const rawData = await fetchWithRetry(kosisUrl);
+                // 이중 포장된 박스를 가져옵니다.
+                const response = await fetch(proxyUrl);
+                const wrapperData = await response.json();
                 
-                if (rawData.err || rawData.error) {
-                    loadingBox.innerText = "앗! 통계청 쪽지: " + JSON.stringify(rawData);
+                // 포장지(contents)를 뜯어서 진짜 통계청 데이터를 꺼냅니다. (에러 원인 해결!)
+                const rawData = JSON.parse(wrapperData.contents);
+                
+                if (rawData.err || rawData.error || rawData.errMsg) {
+                    loadingBox.innerText = "앗! 통계청에서 에러 쪽지를 보냈습니다: " + JSON.stringify(rawData);
                     return; 
                 }
 
-                // 지역 필터링
+                // 우리가 고른 지역만 뜰채로 건져냅니다.
                 let data = rawData;
                 if (selectedSigungu !== "전체") {
                     data = rawData.filter(item => item.OBJ_NM === selectedSigungu);
@@ -160,11 +135,11 @@
                 }
 
                 if (data.length === 0) {
-                    loadingBox.innerHTML = `<span style="color:#d9534f;">😢 조회된 데이터가 없습니다.</span>`;
+                    loadingBox.innerHTML = `<span style="color:#d9534f;">😢 조회된 데이터가 없습니다. 해당 연도나 지역에 통계청 데이터가 아직 작성되지 않았을 수 있습니다.</span>`;
                     return;
                 }
 
-                // 연도별 데이터 그룹화 및 연산
+                // 자체 연산 엔진
                 const groupedData = {};
                 data.forEach(item => {
                     const key = item.OBJ_NM + "_" + item.ITM_NM; 
@@ -174,7 +149,6 @@
                     groupedData[key].years[item.PRD_DE] = item.DT ? parseFloat(item.DT) : null;
                 });
 
-                // 표 HTML 생성
                 let tableHTML = `
                     <table id="resultTable">
                         <thead>
@@ -207,7 +181,7 @@
                         const pastYear = String(parseInt(latestYear) - 5);
                         const pastValue = group.years[pastYear];
                         
-                        let changeRateHTML = "비교 불가"; // 엑셀 다운로드를 위해 HTML 태그를 최소화합니다.
+                        let changeRateHTML = "비교 불가"; 
                         let pastValueDisplay = "-";
 
                         if (pastValue !== undefined && pastValue !== null && pastValue !== 0) {
@@ -238,35 +212,27 @@
 
                 tableHTML += `</tbody></table>`;
                 tableBox.innerHTML = tableHTML;
-                loadingBox.innerText = `🎉 무안군 맞춤형 데이터 조회가 완료되었습니다! 우측 상단의 엑셀 다운로드 버튼을 눌러보세요.`;
+                loadingBox.innerText = `🎉 성공! 무안군 맞춤형 데이터 조회가 완료되었습니다! 우측 상단의 엑셀 다운로드 버튼을 눌러보세요.`;
 
             } catch (error) {
-                loadingBox.innerText = "앗! " + error.message;
+                loadingBox.innerText = "앗! 데이터를 가져오는데 실패했어요. 😢 원인: " + error.message;
             }
         }
 
-        // 💡 엑셀(CSV) 내보내기 마법 함수
+        // 엑셀 내보내기 마법
         function exportToCSV() {
-            // 화면에 그려진 표(Table)를 찾습니다.
             const table = document.getElementById("resultTable");
-            
             if (!table) {
                 alert("먼저 [조회하기] 버튼을 눌러 데이터를 불러와 주세요!");
                 return;
             }
-
-            let csvContent = "\uFEFF"; // 한글이 엑셀에서 깨지지 않게 해주는 마법의 코드(BOM)입니다.
+            let csvContent = "\uFEFF"; 
             const rows = table.querySelectorAll("tr");
-
-            // 표의 모든 줄을 하나씩 돌면서 글자만 뽑아냅니다.
             rows.forEach(row => {
                 const cols = row.querySelectorAll("th, td");
-                // 콤마(,)가 포함된 숫자 때문에 엑셀 칸이 밀리지 않도록 양옆에 따옴표를 씌워줍니다.
                 const rowData = Array.from(cols).map(col => `"${col.innerText}"`);
                 csvContent += rowData.join(",") + "\n";
             });
-
-            // 엑셀(CSV) 파일로 예쁘게 포장해서 컴퓨터로 다운로드합니다.
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
