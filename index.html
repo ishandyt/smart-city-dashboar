@@ -23,14 +23,18 @@
         tr:hover { background-color: #f1f5f9; }
         
         #loading-message { margin-top: 15px; font-weight: bold; color: #007BFF; }
+        /* 냉장고(캐시)에서 가져왔을 때 보여줄 배지 디자인 */
+        .cache-badge { background-color: #ffc107; color: #333; padding: 3px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; font-weight: bold; }
+        .api-badge { background-color: #17a2b8; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; font-weight: bold; }
+        
         .highlight { color: #d9534f; font-weight: bold; } 
         .positive { color: #5cb85c; font-weight: bold; } 
     </style>
 </head>
 <body onload="initFilters()">
 
-    <h1>📊 스마트도시 통계 분석 대시보드 (무안군 포커스)</h1>
-    <p>무안군을 기준으로 데이터를 조회하고, 결과를 엑셀(CSV)로 다운로드할 수 있습니다.</p>
+    <h1>📊 스마트도시 통계 분석 대시보드 (초고속 캐싱 엔진 탑재 ⚡)</h1>
+    <p>한 번 불러온 데이터는 내 컴퓨터에 임시 저장되어, 지자체를 변경해도 0.1초 만에 즉시 표시됩니다!</p>
 
     <div class="filter-container">
         <div class="filter-group">
@@ -80,7 +84,6 @@
             }
             sidoSelect.value = "전라남도"; 
             updateSigungu();
-            // 기본값을 무안군으로 세팅합니다.
             document.getElementById('sigungu').value = "무안군";
         }
 
@@ -95,6 +98,7 @@
             });
         }
 
+        // 메인 함수
         async function fetchAndAnalyzeData() {
             const loadingBox = document.getElementById('loading-message');
             const tableBox = document.getElementById('table-container');
@@ -104,29 +108,39 @@
             const selectedStartYear = document.getElementById('startYear').value;
             const selectedEndYear = document.getElementById('endYear').value;
 
-            loadingBox.innerText = `[${selectedSido} ${selectedSigungu}] 데이터를 안전하게 '이중 포장'해서 가져오는 중입니다... 🏃‍♂️💨`;
+            // 💡 1. 냉장고(LocalStorage)에 붙일 이름표(Key)를 만듭니다. (예: kosis_2020_2026)
+            const cacheKey = `kosis_${selectedStartYear}_${selectedEndYear}`;
+            let rawData = null;
+            let isCached = false; // 냉장고에서 꺼냈는지 확인하는 변수
+
+            loadingBox.innerText = `[${selectedSido} ${selectedSigungu}] 데이터를 분석 중입니다... 🔍`;
             tableBox.innerHTML = ""; 
 
-            // 멘티님이 발급해주신 최신 기초지자체(ALL) URL입니다!
-            const kosisUrl = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=NDQ1ZTU0ODVjOWM2N2MxMTg1YzI5ZWVjZDhlMGQ4NTg=&itmId=T10+T001+T002+&objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=Y&startPrdDe=${selectedStartYear}&endPrdDe=${selectedEndYear}&outputFields=OBJ_NM+ITM_NM+UNIT_NM+PRD_DE+&orgId=101&tblId=DT_1YL20631`;
-            
-            // 💡 핵심 해결책: 7단계에서 대성공했던 '이중 포장(get)' 특급 배달 기사로 원상복구했습니다.
-            const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(kosisUrl);
-
             try {
-                // 이중 포장된 박스를 가져옵니다.
-                const response = await fetch(proxyUrl);
-                const wrapperData = await response.json();
-                
-                // 포장지(contents)를 뜯어서 진짜 통계청 데이터를 꺼냅니다. (에러 원인 해결!)
-                const rawData = JSON.parse(wrapperData.contents);
-                
-                if (rawData.err || rawData.error || rawData.errMsg) {
-                    loadingBox.innerText = "앗! 통계청에서 에러 쪽지를 보냈습니다: " + JSON.stringify(rawData);
-                    return; 
+                // 💡 2. 먼저 냉장고(캐시)를 열어봅니다!
+                const cachedString = localStorage.getItem(cacheKey);
+
+                if (cachedString) {
+                    // 냉장고에 데이터가 있다면? 마트(API)에 안 가고 바로 꺼내 씁니다!
+                    rawData = JSON.parse(cachedString);
+                    isCached = true;
+                } else {
+                    // 냉장고에 없으면? Vercel 터널을 통해 마트(통계청)로 뛰어갑니다.
+                    const kosisUrl = `/api/kosis?method=getList&apiKey=NDQ1ZTU0ODVjOWM2N2MxMTg1YzI5ZWVjZDhlMGQ4NTg=&itmId=T10+T001+T002+&objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=Y&startPrdDe=${selectedStartYear}&endPrdDe=${selectedEndYear}&outputFields=OBJ_NM+ITM_NM+UNIT_NM+PRD_DE+&orgId=101&tblId=DT_1YL20631`;
+                    
+                    const response = await fetch(kosisUrl);
+                    rawData = await response.json();
+                    
+                    if (rawData.err || rawData.error || rawData.errMsg) {
+                        loadingBox.innerText = "앗! 통계청 쪽지: " + JSON.stringify(rawData);
+                        return; 
+                    }
+
+                    // 💡 3. 새로 사 온 식재료를 다음번을 위해 냉장고에 예쁘게 포장해서 넣어둡니다.
+                    localStorage.setItem(cacheKey, JSON.stringify(rawData));
                 }
 
-                // 우리가 고른 지역만 뜰채로 건져냅니다.
+                // ----------------- 아래부터는 기존과 동일한 뜰채(필터링) 및 표 그리기 작업입니다 -----------------
                 let data = rawData;
                 if (selectedSigungu !== "전체") {
                     data = rawData.filter(item => item.OBJ_NM === selectedSigungu);
@@ -135,11 +149,10 @@
                 }
 
                 if (data.length === 0) {
-                    loadingBox.innerHTML = `<span style="color:#d9534f;">😢 조회된 데이터가 없습니다. 해당 연도나 지역에 통계청 데이터가 아직 작성되지 않았을 수 있습니다.</span>`;
+                    loadingBox.innerHTML = `<span style="color:#d9534f;">😢 조회된 데이터가 없습니다.</span>`;
                     return;
                 }
 
-                // 자체 연산 엔진
                 const groupedData = {};
                 data.forEach(item => {
                     const key = item.OBJ_NM + "_" + item.ITM_NM; 
@@ -212,14 +225,19 @@
 
                 tableHTML += `</tbody></table>`;
                 tableBox.innerHTML = tableHTML;
-                loadingBox.innerText = `🎉 성공! 무안군 맞춤형 데이터 조회가 완료되었습니다! 우측 상단의 엑셀 다운로드 버튼을 눌러보세요.`;
+                
+                // 화면 안내 문구 표시 (어디서 가져왔는지 알려줌)
+                if (isCached) {
+                    loadingBox.innerHTML = `🎉 ${selectedSido} ${selectedSigungu} 데이터 조회 완료! <span class="cache-badge">⚡ 브라우저 임시저장소(캐시)에서 0.1초 만에 불러옴</span>`;
+                } else {
+                    loadingBox.innerHTML = `🎉 ${selectedSido} ${selectedSigungu} 데이터 조회 완료! <span class="api-badge">☁️ 통계청 서버에서 최신 데이터 가져옴</span>`;
+                }
 
             } catch (error) {
-                loadingBox.innerText = "앗! 데이터를 가져오는데 실패했어요. 😢 원인: " + error.message;
+                loadingBox.innerText = "앗! 데이터를 분석하는 중 문제가 발생했습니다. 😢 원인: " + error.message;
             }
         }
 
-        // 엑셀 내보내기 마법
         function exportToCSV() {
             const table = document.getElementById("resultTable");
             if (!table) {
@@ -236,7 +254,7 @@
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "무안군_스마트도시_통계분석.csv";
+            link.download = "스마트도시_통계분석.csv";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
