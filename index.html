@@ -4,93 +4,232 @@
     <meta charset="UTF-8">
     <title>스마트도시 통계 대시보드</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; padding: 30px; background-color: #f9f9f9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
-        th { background-color: #007BFF; color: white; font-weight: bold; }
-        tr:hover { background-color: #f1f1f1; }
-        button { padding: 10px 20px; font-size: 16px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        button:hover { background-color: #218838; }
+        /* 웹페이지 전체의 기본 글씨체와 배경색을 설정합니다. */
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 30px; background-color: #f4f6f9; }
+        
+        /* 💡 추가된 디자인: 검색 필터 전체를 감싸는 하얀색 둥근 상자입니다. */
+        .filter-container {
+            display: flex; /* 상자 안의 내용물들을 가로로 나란히 배치하는 마법입니다. */
+            align-items: flex-end; /* 아래쪽 선을 기준으로 가지런히 맞춥니다. */
+            gap: 20px; /* 상자들 사이의 간격을 띄워줍니다. */
+            background-color: white;
+            padding: 20px 30px;
+            border-radius: 10px; /* 모서리를 둥글게 */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* 살짝 그림자를 주어 입체감을 살립니다. */
+            margin-bottom: 20px;
+        }
+
+        /* 💡 추가된 디자인: 각각의 라벨(제목)과 드롭다운을 묶어주는 그룹입니다. */
+        .filter-group {
+            display: flex;
+            flex-direction: column; /* 위(라벨) 아래(드롭다운)로 배치합니다. */
+            gap: 8px; /* 라벨과 드롭다운 사이 간격 */
+        }
+
+        /* 라벨(광역지자체, 시작연도 등)의 글씨 크기와 색상입니다. */
+        .filter-group label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        /* 드롭다운(선택 상자) 자체의 예쁜 디자인입니다. */
+        .filter-group select {
+            padding: 10px 15px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none; /* 클릭했을 때 생기는 기본 파란 테두리를 없앱니다. */
+            min-width: 150px; /* 상자의 최소 너비를 정해줍니다. */
+            cursor: pointer;
+        }
+
+        /* 💡 조회 버튼 디자인 (보내주신 사진의 남색 버튼과 비슷하게 맞췄습니다!) */
+        .search-btn { 
+            padding: 11px 30px; 
+            font-size: 15px; 
+            font-weight: bold;
+            background-color: #3b6083; /* 고급스러운 남색 */
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            transition: 0.2s; /* 마우스 올릴 때 부드럽게 색이 변하는 효과 */
+        }
+        .search-btn:hover { background-color: #2c4966; }
+
+        /* 표(Table) 디자인 (이전과 동일) */
+        table { width: 100%; border-collapse: collapse; background-color: white; box-shadow: 0 0 10px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #eee; padding: 14px; text-align: center; font-size: 14px; }
+        th { background-color: #f8f9fa; color: #333; font-weight: bold; border-bottom: 2px solid #ddd; }
+        tr:hover { background-color: #f1f5f9; }
         #loading-message { margin-top: 15px; font-weight: bold; color: #007BFF; }
+        .highlight { color: #d9534f; font-weight: bold; } 
+        .positive { color: #5cb85c; font-weight: bold; } 
     </style>
 </head>
-<body>
-    <h1>📊 스마트도시 통계 분석 대시보드 (진짜 데이터 연동!)</h1>
-    <p>가장 강력한 특급 배달 기사를 통해 통계청(KOSIS) 데이터를 가져옵니다.</p>
+<body onload="initFilters()">
 
-    <button onclick="fetchAndDrawTable()">진짜 데이터로 표 그리기!</button>
+    <h1>📊 스마트도시 통계 분석 대시보드</h1>
+    <p>원하는 지자체와 연도 범위를 선택한 후 조회 버튼을 눌러보세요.</p>
+
+    <div class="filter-container">
+        <div class="filter-group">
+            <label>광역지자체</label>
+            <select id="sido">
+                <option value="전라남도">전라남도</option>
+                <option value="서울특별시">서울특별시</option>
+                <option value="부산광역시">부산광역시</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>기초지자체</label>
+            <select id="sigungu">
+                <option value="장성군">장성군</option>
+                <option value="강남구">강남구</option>
+                <option value="해운대구">해운대구</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>시작연도</label>
+            <select id="startYear"></select>
+        </div>
+        <div class="filter-group">
+            <label>끝연도</label>
+            <select id="endYear"></select>
+        </div>
+        <button class="search-btn" onclick="fetchAndAnalyzeData()">조회</button>
+    </div>
 
     <div id="loading-message"></div>
     <div id="table-container"></div>
 
     <script>
-        async function fetchAndDrawTable() {
+        // 1. 화면이 켜질 때 연도 드롭다운을 2010년부터 2026년까지 자동으로 채워주는 함수입니다.
+        function initFilters() {
+            const startYearSelect = document.getElementById('startYear');
+            const endYearSelect = document.getElementById('endYear');
+            
+            // 2010년부터 2026년까지 반복문을 돌면서 <option>을 만듭니다.
+            for (let year = 2010; year <= 2026; year++) {
+                let option1 = document.createElement('option');
+                option1.value = year;
+                option1.text = year + '년';
+                startYearSelect.add(option1);
+
+                let option2 = document.createElement('option');
+                option2.value = year;
+                option2.text = year + '년';
+                endYearSelect.add(option2);
+            }
+
+            // 기본값 세팅: 시작은 2016년, 끝은 2026년으로 맞춰둡니다.
+            startYearSelect.value = "2016";
+            endYearSelect.value = "2026";
+        }
+
+        async function fetchAndAnalyzeData() {
             const loadingBox = document.getElementById('loading-message');
             const tableBox = document.getElementById('table-container');
 
-            loadingBox.innerText = "통계청 주방에서 데이터를 꼼꼼하게 포장해서 가져오는 중입니다... 🏃‍♂️💨";
+            // 💡 2. 사용자가 화면에서 선택한 시작연도와 끝연도의 '숫자'를 가져옵니다.
+            const selectedStartYear = document.getElementById('startYear').value;
+            const selectedEndYear = document.getElementById('endYear').value;
+
+            loadingBox.innerText = `[${selectedStartYear}년 ~ ${selectedEndYear}년] 데이터를 통계청에서 가져오는 중입니다... 🏃‍♂️💨`;
             tableBox.innerHTML = ""; 
 
-            // 멘티님의 진짜 KOSIS 원본 주문서(URL)
-            const kosisUrl = "https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=NDQ1ZTU0ODVjOWM2N2MxMTg1YzI5ZWVjZDhlMGQ4NTg=&itmId=T10+T001+T002+&objL1=00+11+21+22+23+24+25+26+29+31+32+33+34+35+36+37+38+39+&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=Y&startPrdDe=2020&endPrdDe=2026&outputFields=OBJ_NM+ITM_NM+UNIT_NM+PRD_DE+&orgId=101&tblId=DT_1YL20631";
+            // 💡 3. 주문서(URL)에 사용자가 선택한 연도를 합체(변수 치환)시킵니다!
+            // 기존 2020, 2026 자리에 ${selectedStartYear} 와 ${selectedEndYear} 가 들어갑니다.
+            const kosisUrl = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=NDQ1ZTU0ODVjOWM2N2MxMTg1YzI5ZWVjZDhlMGQ4NTg=&itmId=T10+T001+T002+&objL1=00+11+21+22+23+24+25+26+29+31+32+33+34+35+36+37+38+39+&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=Y&startPrdDe=${selectedStartYear}&endPrdDe=${selectedEndYear}&outputFields=OBJ_NM+ITM_NM+UNIT_NM+PRD_DE+&orgId=101&tblId=DT_1YL20631`;
             
-            // 💡 수정된 핵심 부분: 가장 안정적인 allorigins의 'get' 방식을 사용합니다.
-            const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(kosisUrl);
-
             try {
-                // 1. 특급 배달 기사가 데이터를 'contents'라는 큰 박스에 이중 포장해서 가져옵니다.
-                const response = await fetch(proxyUrl);
-                const wrapperData = await response.json();
+                // Vercel 직접 연결!
+                const response = await fetch(kosisUrl);
+                const data = await response.json();
                 
-                // 2. 포장지(contents)를 뜯어서 진짜 데이터를 컴퓨터가 읽기 편하게 번역(JSON.parse)합니다.
-                const data = JSON.parse(wrapperData.contents);
-                
-                // 3. 통계청에서 에러 쪽지를 보냈을 경우
                 if (data.err || data.error || data.errMsg) {
                     loadingBox.innerText = "앗! 통계청에서 에러 쪽지를 보냈습니다: " + JSON.stringify(data);
                     return; 
                 }
 
-                loadingBox.innerText = "🎉 성공! 100% 진짜 공공데이터로 표를 그렸습니다!";
+                // 자체 연산 엔진 가동 (이전 단계와 동일합니다)
+                const groupedData = {};
+                data.forEach(item => {
+                    const key = item.OBJ_NM + "_" + item.ITM_NM; 
+                    if (!groupedData[key]) {
+                        groupedData[key] = { region: item.OBJ_NM, item: item.ITM_NM, unit: item.UNIT_NM, years: {} };
+                    }
+                    groupedData[key].years[item.PRD_DE] = item.DT ? parseFloat(item.DT) : null;
+                });
 
                 let tableHTML = `
                     <table>
                         <thead>
                             <tr>
-                                <th>연도</th>
                                 <th>지자체명</th>
                                 <th>항목명</th>
-                                <th>수치 (통계값)</th>
-                                <th>단위</th>
+                                <th>최신 기준연도</th>
+                                <th>최신값</th>
+                                <th>5년 전 값</th>
+                                <th>5년 변화율 (%)</th>
                             </tr>
                         </thead>
                         <tbody>
                 `;
 
-                data.forEach(function(item) {
-                    // 데이터가 비어있으면 '-' 표시를 해줍니다.
-                    const value = item.DT ? item.DT : "-";
+                Object.values(groupedData).forEach(group => {
+                    const sortedYears = Object.keys(group.years).sort((a, b) => b - a);
+                    let latestYear = null;
+                    let latestValue = null;
 
-                    tableHTML += `
-                        <tr>
-                            <td>${item.PRD_DE}</td>
-                            <td>${item.OBJ_NM}</td>
-                            <td>${item.ITM_NM}</td>
-                            <td>${value}</td>
-                            <td>${item.UNIT_NM}</td>
-                        </tr>
-                    `;
+                    for (let year of sortedYears) {
+                        if (group.years[year] !== null && !isNaN(group.years[year])) {
+                            latestYear = year;
+                            latestValue = group.years[year];
+                            break; 
+                        }
+                    }
+
+                    if (latestYear) {
+                        const pastYear = String(parseInt(latestYear) - 5);
+                        const pastValue = group.years[pastYear];
+                        
+                        let changeRateHTML = "<span style='color:gray;'>비교 불가 (5년전 데이터 없음)</span>";
+                        let pastValueDisplay = "-";
+
+                        if (pastValue !== undefined && pastValue !== null && pastValue !== 0) {
+                            pastValueDisplay = pastValue.toLocaleString() + " " + group.unit;
+                            const changeRate = ((latestValue - pastValue) / pastValue) * 100;
+                            
+                            if(changeRate > 0) {
+                                changeRateHTML = `<span class="positive">▲ ${changeRate.toFixed(2)}%</span>`;
+                            } else if(changeRate < 0) {
+                                changeRateHTML = `<span class="highlight">▼ ${Math.abs(changeRate).toFixed(2)}%</span>`;
+                            } else {
+                                changeRateHTML = `<span>0.00%</span>`;
+                            }
+                        }
+
+                        tableHTML += `
+                            <tr>
+                                <td>${group.region}</td>
+                                <td>${group.item}</td>
+                                <td style="font-weight:bold; color:#3b6083;">${latestYear}년</td>
+                                <td>${latestValue.toLocaleString()} ${group.unit}</td>
+                                <td>${pastValueDisplay}</td>
+                                <td>${changeRateHTML}</td>
+                            </tr>
+                        `;
+                    }
                 });
 
-                tableHTML += `
-                        </tbody>
-                    </table>
-                `;
-
+                tableHTML += `</tbody></table>`;
                 tableBox.innerHTML = tableHTML;
+                loadingBox.innerText = `🎉 성공! 선택하신 ${selectedStartYear}년~${selectedEndYear}년 기준 분석을 마쳤습니다!`;
 
             } catch (error) {
-                loadingBox.innerText = "앗! 데이터를 가져오는데 실패했어요. 😢 원인: " + error.message;
+                loadingBox.innerText = "앗! 데이터를 분석하는데 실패했어요. 😢 원인: " + error.message;
             }
         }
     </script>
